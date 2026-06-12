@@ -328,15 +328,8 @@
 
             const CONSTANTS = {
                 MAX_MESSAGE_LENGTH: 500,
-                VOICE_RECORD_DELAY: 3000,
                 VISUAL_ANALYSIS_INTERVAL: 5000,
-                BACKEND_URL: 'http://localhost:3000/api',
-                VOICE_MESSAGES: [
-                    "你好，我想知道今天天气怎么样？",
-                    "你能帮我看看这个物体是什么吗？",
-                    "我想聊聊关于科技的话题。",
-                    "你觉得我的表情看起来开心吗？"
-                ]
+                BACKEND_URL: 'http://localhost:3000/api'
             };
 
             let isConversationActive = false;
@@ -345,6 +338,12 @@
             let visualAnalysisTimer = null;
             let mediaStream = null;
             let conversationHistory = [];
+            let aiSettings = {
+                name: 'AI助手',
+                persona: ''
+            };
+            let recognition = null;
+            let isRecognitionSupported = false;
 
             function getElement(id) {
                 return document.getElementById(id);
@@ -654,34 +653,106 @@
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
                     sendMessage();
+                              }
+            }
+
+            function initSpeechRecognition() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    recognition = new SpeechRecognition();
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'zh-CN';
+
+                    recognition.onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        console.log('✅ 语音识别结果:', transcript);
+
+                        if (transcript.trim()) {
+                            addMessage('user', transcript);
+                            getElement('messageInput').value = transcript;
+
+                            safeSetTimeout(() => {
+                                sendMessage();
+                            }, 500);
+                        }
+
+                        resetVoiceButton();
+                    };
+
+                    recognition.onerror = function(event) {
+                        console.error('语音识别错误:', event.error);
+                        let errorMsg = '语音识别失败';
+
+                        switch(event.error) {
+                            case 'no-speech':
+                                errorMsg = '未检测到语音，请重试';
+                                break;
+                            case 'audio-capture':
+                                errorMsg = '无法访问麦克风';
+                                break;
+                            case 'not-allowed':
+                                errorMsg = '麦克风权限被拒绝';
+                                break;
+                            case 'network':
+                                errorMsg = '网络连接错误';
+                                break;
+                        }
+
+                        showError(errorMsg);
+                        resetVoiceButton();
+                    };
+
+                    recognition.onend = function() {
+                        if (isVoiceRecording) {
+                            resetVoiceButton();
+                        }
+                    };
+
+                    isRecognitionSupported = true;
+                    console.log('✅ 语音识别已初始化');
+                } else {
+                    console.warn('⚠️ 浏览器不支持语音识别，请使用Chrome或Edge浏览器');
+                    isRecognitionSupported = false;
                 }
+            }
+
+            function resetVoiceButton() {
+                isVoiceRecording = false;
+                const btn = getElement('voiceBtn');
+                btn.textContent = '🎤 说话';
+                btn.style.background = '#667eea';
             }
 
             function toggleVoiceRecording() {
                 if (!isConversationActive) return;
 
-                isVoiceRecording = !isVoiceRecording;
-                const btn = getElement('voiceBtn');
+                if (!isRecognitionSupported) {
+                    showError('您的浏览器不支持语音识别,请使用Chrome或Edge浏览器');
+                    return;
+                }
 
-                if (isVoiceRecording) {
-                    btn.textContent = '🔴 录音中...';
-                    btn.style.background = '#e74c3c';
-
-                    // 模拟语音输入
-                    safeSetTimeout(() => {
-                        const voiceMessages = CONSTANTS.VOICE_MESSAGES;
-                        const randomMessage = voiceMessages[Math.floor(Math.random() * voiceMessages.length)];
-
-                        addMessage('user', randomMessage);
-
-                        // 重置按钮状态
-                        isVoiceRecording = false;
-                        btn.textContent = '🎤 说话';
-                        btn.style.background = '#667eea';
-                    }, CONSTANTS.VOICE_RECORD_DELAY);
+                if (!isVoiceRecording) {
+                    try {
+                        recognition.start();
+                        isVoiceRecording = true;
+                        const btn = getElement('voiceBtn');
+                        btn.textContent = '🔴 录音中...';
+                        btn.style.background = '#e74c3c';
+                        console.log('🎤 开始录音...');
+                    } catch (error) {
+                        console.error('启动语音识别失败:', error);
+                        showError('语音识别启动失败，请检查麦克风权限');
+                        resetVoiceButton();
+                    }
                 } else {
-                    btn.textContent = '🎤 说话';
-                    btn.style.background = '#667eea';
+                    try {
+                        recognition.stop();
+                        console.log('⏹️ 停止录音');
+                    } catch (error) {
+                        console.error('停止语音识别失败:', error);
+                    }
+                    resetVoiceButton();
                 }
             }
 
@@ -693,11 +764,20 @@
                 getElement('messageInput').addEventListener('keypress', handleKeyPress);
             }
 
+            function loadSettings() {
+                aiSettings.name = 'AI助手';
+                aiSettings.persona = '';
+            }
+
             function init() {
+                loadSettings();
+                initSpeechRecognition();
                 updateStatus();
                 initEventListeners();
                 console.log('✅ AI视觉语音对话助手已初始化');
                 console.log('🤖 AI提供商: 通义千问 (Qwen)');
+                console.log(`🤖 AI名字: ${aiSettings.name}`);
+                console.log(`🎤 语音识别: ${isRecognitionSupported ? '已启用' : '不支持'}`);
             }
 
             if (document.readyState === 'loading') {
