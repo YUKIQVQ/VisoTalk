@@ -141,12 +141,75 @@
             color: white;
         }
 
+        .visual-analysis {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 20px;
+            max-height: 150px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .visual-analysis h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .visual-analysis-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #856404;
+            padding: 0;
+        }
+
+        .visual-analysis-toggle:hover {
+            opacity: 0.7;
+        }
+
+        .visual-analysis.collapsed .analysis-content-wrapper {
+            display: none;
+        }
+
+        .analysis-content-wrapper {
+            max-height: 120px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 5px;
+        }
+
+        .analysis-content-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .analysis-content-wrapper::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 3px;
+        }
+
+        .analysis-content-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(133, 100, 4, 0.3);
+            border-radius: 3px;
+        }
+
+        .analysis-content-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(133, 100, 4, 0.5);
+        }
+
         .chat-section {
             flex: 1;
             display: flex;
             flex-direction: column;
             padding: 20px;
             gap: 15px;
+            overflow: hidden;
+            min-height: 0;
         }
 
         .chat-history {
@@ -155,24 +218,46 @@
             border: 1px solid #ddd;
             border-radius: 10px;
             padding: 15px;
-            background: #fafafa;
+            background: white;
+            min-height: 0;
+        }
+
+        .chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-history::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .chat-history::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .chat-history::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
         .message {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 10px;
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
             max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.5;
         }
 
         .user-message {
-            background: #3498db;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             margin-left: auto;
+            text-align: right;
         }
 
         .ai-message {
-            background: #ecf0f1;
+            background: #f0f0f0;
             color: #333;
             margin-right: auto;
         }
@@ -226,19 +311,6 @@
             100% { opacity: 1; }
         }
 
-        .visual-analysis {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-        }
-
-        .visual-analysis h4 {
-            color: #856404;
-            margin-bottom: 10px;
-        }
-
         .loading {
             display: inline-block;
             width: 20px;
@@ -261,6 +333,178 @@
             margin: 10px 0;
             border-left: 4px solid #c33;
         }
+
+        .settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #667eea;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .persona-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .persona-display.active {
+            display: block;
+        }
+
+        .persona-display strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .persona-display .persona-text {
+            opacity: 0.9;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -268,6 +512,7 @@
         <div class="header">
             <h1>🤖 AI 视觉语音对话助手</h1>
             <p>开启摄像头和麦克风，与AI进行视觉语音交互</p>
+            <button class="settings-btn" id="settingsBtn" title="设置人设">⚙️</button>
         </div>
 
         <div class="main-content">
@@ -300,15 +545,25 @@
 
                 <div id="errorContainer" style="padding: 0 20px;"></div>
 
-                <div class="visual-analysis" id="visualAnalysis" style="display: none; margin: 10px 20px;">
-                    <h4>🔍 视觉分析结果</h4>
-                    <div id="analysisContent"></div>
+                <div class="persona-display" id="personaDisplay">
+                    <strong> AI人设：<span id="personaName"></span></strong>
+                    <div class="persona-text" id="personaText"></div>
                 </div>
 
-                <div class="chat-section" style="flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 15px;">
-                    <div class="chat-history" id="chatHistory" style="flex: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 10px; padding: 15px; background: white;">
-                        <div class="message ai-message">
-                            你好！我是AI助手，我已经准备好通过视觉和语音与你交流。请开启摄像头和麦克风开始对话。
+                <div class="visual-analysis" id="visualAnalysis" style="display: none;">
+                    <h4>
+                        <span>📊 视觉分析结果</span>
+                        <button class="visual-analysis-toggle" id="toggleVisualAnalysis" title="折叠/展开">▼</button>
+                    </h4>
+                    <div class="analysis-content-wrapper" id="analysisContentWrapper">
+                        <div id="analysisContent"></div>
+                    </div>
+                </div>
+
+                <div class="chat-section">
+                    <div class="chat-history" id="chatHistory">
+                        <div class="message ai-message" id="initialMessage">
+                            你好！我是<span id="aiDisplayName">AI助手</span>，我已经准备好通过视觉和语音与你交流。请开启摄像头和麦克风开始对话。
                         </div>
                     </div>
 
@@ -319,6 +574,31 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ AI 人设配置</h2>
+                <button class="close-btn" id="closeSettingsBtn">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label for="aiNameInput">AI 名字</label>
+                <input type="text" id="aiNameInput" placeholder="例如：小智、AI助手" maxlength="20">
+                <div class="form-hint">给AI起一个你喜欢的名字（留空使用默认：AI助手）</div>
+            </div>
+
+            <div class="form-group">
+                <label for="personaInput">主要人设</label>
+                <textarea id="personaInput" placeholder="例如：你是一个友善的学习助手，擅长解答数学和科学问题..."></textarea>
+                <div class="form-hint">描述AI的性格特点、专业领域和交流风格（留空使用默认人设）</div>
+            </div>
+
+            <button class="save-btn" id="saveSettingsBtn">💾 保存设置</button>
+            <button class="reset-btn" id="resetSettingsBtn">🔄 恢复默认</button>
         </div>
     </div>
 
@@ -383,14 +663,95 @@
                 }
             }
 
+            function loadSettings() {
+                const saved = localStorage.getItem('aiSettings');
+                if (saved) {
+                    try {
+                        aiSettings = JSON.parse(saved);
+                        console.log('✅ 已加载AI设置:', aiSettings);
+                        updateAIDisplayName();
+                    } catch (e) {
+                        console.error('加载设置失败:', e);
+                    }
+                } else {
+                    updateAIDisplayName();
+                }
+            }
+
+            function updateAIDisplayName() {
+                const displayName = getElement('aiDisplayName');
+                if (displayName) {
+                    displayName.textContent = aiSettings.name;
+                }
+
+                const pageTitle = document.querySelector('title');
+                if (pageTitle) {
+                    pageTitle.textContent = `${aiSettings.name} - AI视觉语音对话助手`;
+                }
+            }
+
+            function saveSettings() {
+                localStorage.setItem('aiSettings', JSON.stringify(aiSettings));
+                console.log('✅ AI设置已保存:', aiSettings);
+            }
+
+            function resetSettings() {
+                aiSettings = {
+                    name: 'AI助手',
+                    persona: ''
+                };
+                localStorage.removeItem('aiSettings');
+                console.log('✅ AI设置已重置为默认值');
+            }
+
+            function openSettingsModal() {
+                const modal = getElement('settingsModal');
+                const aiNameInput = getElement('aiNameInput');
+                const personaInput = getElement('personaInput');
+
+                aiNameInput.value = aiSettings.name === 'AI助手' ? '' : aiSettings.name;
+                personaInput.value = aiSettings.persona;
+
+                modal.classList.add('active');
+            }
+
+            function closeSettingsModal() {
+                const modal = getElement('settingsModal');
+                modal.classList.remove('active');
+            }
+
+            function handleSaveSettings() {
+                const aiNameInput = getElement('aiNameInput').value.trim();
+                const personaInput = getElement('personaInput').value.trim();
+
+                aiSettings.name = aiNameInput || 'AI助手';
+                aiSettings.persona = personaInput;
+
+                saveSettings();
+                closeSettingsModal();
+                updateAIDisplayName();
+
+                let message = `✅ 设置已保存！AI名字：${aiSettings.name}`;
+                if (aiSettings.persona) {
+                    message += `\n人设：${aiSettings.persona.substring(0, 30)}...`;
+                }
+                showError(message);
+            }
+
+            function handleResetSettings() {
+                if (confirm('确定要恢复默认设置吗？')) {
+                    resetSettings();
+                    getElement('aiNameInput').value = '';
+                    getElement('personaInput').value = '';
+                    updateAIDisplayName();
+                    updatePersonaDisplay();
+                    showError('✅ 已恢复默认设置');
+                }
+            }
+
             function clearPendingTimers() {
                 pendingTimers.forEach(timer => clearTimeout(timer));
                 pendingTimers = [];
-
-                if (visualAnalysisTimer) {
-                    clearInterval(visualAnalysisTimer);
-                    visualAnalysisTimer = null;
-                }
             }
 
             function safeSetTimeout(callback, delay) {
@@ -496,6 +857,7 @@
             function displayVisualAnalysis(analysis) {
                 if (!analysis) return;
 
+                const visualAnalysis = getElement('visualAnalysis');
                 const analysisContent = getElement('analysisContent');
 
                 try {
@@ -508,9 +870,27 @@
                         <p><strong>置信度:</strong> ${(analysis.confidence * 100).toFixed(1)}%</p>
                         <p><strong>处理时间:</strong> ${analysis.processingTime}ms</p>
                     `;
-                    getElement('visualAnalysis').style.display = 'block';
+                    visualAnalysis.style.display = 'block';
+
+                    // 自动滚动到视觉分析区域
+                    visualAnalysis.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 } catch (error) {
                     console.error('显示视觉分析失败:', error);
+                }
+            }
+
+            function toggleVisualAnalysis() {
+                const visualAnalysis = getElement('visualAnalysis');
+                const toggleBtn = getElement('toggleVisualAnalysis');
+
+                visualAnalysis.classList.toggle('collapsed');
+
+                if (visualAnalysis.classList.contains('collapsed')) {
+                    toggleBtn.textContent = '▶';
+                    toggleBtn.title = '展开';
+                } else {
+                    toggleBtn.textContent = '▼';
+                    toggleBtn.title = '折叠';
                 }
             }
 
@@ -518,11 +898,12 @@
                 if (isConversationActive) return;
 
                 console.log('🔍 开始检查摄像头权限...');
+                console.log('🎭 当前AI设置:', JSON.stringify(aiSettings));
 
                 const cameraStarted = await initCamera();
                 if (!cameraStarted) {
                     showError('请先允许摄像头和麦克风权限');
-                    console.error('❌ 摄像头启动失败');
+                    console.error(' 摄像头启动失败');
                     return;
                 }
 
@@ -533,7 +914,13 @@
                 getElement('startBtn').disabled = true;
                 getElement('stopBtn').disabled = false;
 
-                addMessage('ai', '你好！我已经开启视觉和语音识别功能，现在可以同时看到你和听到你说的话。请告诉我你想聊什么！');
+                let greeting = `你好！我是${aiSettings.name}`;
+                if (aiSettings.persona) {
+                    greeting += `，${aiSettings.persona.split('\n')[0].substring(0, 50)}`;
+                }
+                greeting += `，我已经开启视觉和语音识别功能，现在可以同时看到你和听到你说的话。请告诉我你想聊什么！`;
+
+                addMessage('ai', greeting);
 
                 // 定期视觉分析
                 visualAnalysisTimer = setInterval(() => {
@@ -571,7 +958,8 @@
                 getElement('stopBtn').disabled = true;
                 getElement('visualAnalysis').style.display = 'none';
 
-                addMessage('ai', '对话已结束。如果你有任何问题，随时可以重新开始！');
+                const farewell = `${aiSettings.name}：对话已结束。如果你有任何问题，随时可以重新开始！`;
+                addMessage('ai', farewell);
 
                 console.log('✅ 对话已停止');
             }
@@ -584,7 +972,11 @@
                 messageDiv.className = `message ${sender}-message`;
                 messageDiv.textContent = message.trim();
                 chatHistory.appendChild(messageDiv);
-                chatHistory.scrollTop = chatHistory.scrollHeight;
+
+                // 自动滚动到底部
+                setTimeout(() => {
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                }, 100);
 
                 // 保存到历史记录
                 conversationHistory.push({
@@ -593,9 +985,9 @@
                     timestamp: new Date().toISOString()
                 });
 
-                // 保留最近10条记录
-                if (conversationHistory.length > 10) {
-                    conversationHistory = conversationHistory.slice(-10);
+                // 保留最近50条记录
+                if (conversationHistory.length > 50) {
+                    conversationHistory = conversationHistory.slice(-50);
                 }
             }
 
@@ -615,9 +1007,20 @@
                 addMessage('user', message);
                 input.value = '';
 
+                console.log('📤 发送消息:', message);
+                console.log('🎭 当前AI设置:', JSON.stringify(aiSettings));
+
                 try {
-                    // 获取最新的视觉分析
-                    const visionData = await analyzeVision();
+                    // 检查用户是否提及了视觉相关内容
+                    const needsVisionAnalysis = checkIfNeedsVision(message);
+
+                    let visionData = null;
+                    if (needsVisionAnalysis) {
+                        console.log('️ 检测到需要视觉分析，开始捕获...');
+                        visionData = await analyzeVision();
+                    } else {
+                        console.log('💬 普通对话，不使用视觉分析');
+                    }
 
                     // 调用后端AI API
                     const response = await fetch(`${CONSTANTS.BACKEND_URL}/chat`, {
@@ -628,7 +1031,8 @@
                         body: JSON.stringify({
                             message: message,
                             context: conversationHistory,
-                            visionData: visionData
+                            visionData: visionData,
+                            aiSettings: aiSettings
                         })
                     });
 
@@ -637,6 +1041,7 @@
                     }
 
                     const data = await response.json();
+                    console.log('📥 AI响应:', data);
 
                     if (data.success) {
                         addMessage('ai', data.message);
@@ -649,11 +1054,23 @@
                 }
             }
 
+            function checkIfNeedsVision(message) {
+                const visionKeywords = [
+                    '摄像头', '看到', '看见', '画面', '环境', '周围',
+                    '我在做什么', '我在哪里', '我旁边', '我手上',
+                    '你能看到', '你看到什么', '识别', '分析',
+                    'describe', 'see', 'look', 'view', 'camera'
+                ];
+
+                const lowerMessage = message.toLowerCase();
+                return visionKeywords.some(keyword => lowerMessage.includes(keyword));
+            }
+
             function handleKeyPress(event) {
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
                     sendMessage();
-                              }
+                }
             }
 
             function initSpeechRecognition() {
@@ -728,7 +1145,7 @@
                 if (!isConversationActive) return;
 
                 if (!isRecognitionSupported) {
-                    showError('您的浏览器不支持语音识别,请使用Chrome或Edge浏览器');
+                    showError('您的浏览器不支持语音识别，请使用Chrome或Edge浏览器');
                     return;
                 }
 
@@ -762,11 +1179,18 @@
                 getElement('sendBtn').addEventListener('click', sendMessage);
                 getElement('voiceBtn').addEventListener('click', toggleVoiceRecording);
                 getElement('messageInput').addEventListener('keypress', handleKeyPress);
-            }
+                getElement('settingsBtn').addEventListener('click', openSettingsModal);
+                getElement('closeSettingsBtn').addEventListener('click', closeSettingsModal);
+                getElement('saveSettingsBtn').addEventListener('click', handleSaveSettings);
+                getElement('resetSettingsBtn').addEventListener('click', handleResetSettings);
+                getElement('toggleVisualAnalysis').addEventListener('click', toggleVisualAnalysis);
 
-            function loadSettings() {
-                aiSettings.name = 'AI助手';
-                aiSettings.persona = '';
+                // 点击弹窗外部关闭
+                getElement('settingsModal').addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeSettingsModal();
+                    }
+                });
             }
 
             function init() {
@@ -789,3 +1213,4 @@
     </script>
 </body>
 </html>
+
