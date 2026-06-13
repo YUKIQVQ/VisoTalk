@@ -1284,7 +1284,7 @@
                         console.log('✅ 语音识别结果:', transcript);
 
                         if (transcript.trim()) {
-                            addMessage('user', transcript);
+                            // 只填充输入框，不立即添加消息
                             getElement('messageInput').value = transcript;
 
                             safeSetTimeout(() => {
