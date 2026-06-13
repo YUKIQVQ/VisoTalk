@@ -147,6 +147,7 @@
             flex-direction: column;
             padding: 20px;
             gap: 15px;
+            overflow: hidden;
         }
 
         .chat-history {
@@ -155,24 +156,47 @@
             border: 1px solid #ddd;
             border-radius: 10px;
             padding: 15px;
-            background: #fafafa;
+            background: white;
+            max-height: calc(100vh - 400px);
+            min-height: 200px;
+        }
+
+        .chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-history::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .chat-history::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .chat-history::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
         .message {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 10px;
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
             max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.5;
         }
 
         .user-message {
-            background: #3498db;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             margin-left: auto;
+            text-align: right;
         }
 
         .ai-message {
-            background: #ecf0f1;
+            background: #f0f0f0;
             color: #333;
             margin-right: auto;
         }
@@ -300,13 +324,13 @@
 
                 <div id="errorContainer" style="padding: 0 20px;"></div>
 
-                <div class="visual-analysis" id="visualAnalysis" style="display: none; margin: 10px 20px;">
-                    <h4>🔍 视觉分析结果</h4>
+                <div class="visual-analysis" id="visualAnalysis" style="display: none; margin: 10px 20px; max-height: 200px; overflow-y: auto;">
+                    <h4> 视觉分析结果</h4>
                     <div id="analysisContent"></div>
                 </div>
 
-                <div class="chat-section" style="flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 15px;">
-                    <div class="chat-history" id="chatHistory" style="flex: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 10px; padding: 15px; background: white;">
+                <div class="chat-section">
+                    <div class="chat-history" id="chatHistory">
                         <div class="message ai-message">
                             你好！我是AI助手，我已经准备好通过视觉和语音与你交流。请开启摄像头和麦克风开始对话。
                         </div>
@@ -584,6 +608,8 @@
                 messageDiv.className = `message ${sender}-message`;
                 messageDiv.textContent = message.trim();
                 chatHistory.appendChild(messageDiv);
+
+                // 自动滚动到底部
                 chatHistory.scrollTop = chatHistory.scrollHeight;
 
                 // 保存到历史记录
@@ -593,9 +619,9 @@
                     timestamp: new Date().toISOString()
                 });
 
-                // 保留最近10条记录
-                if (conversationHistory.length > 10) {
-                    conversationHistory = conversationHistory.slice(-10);
+                // 保留最近50条记录
+                if (conversationHistory.length > 50) {
+                    conversationHistory = conversationHistory.slice(-50);
                 }
             }
 
