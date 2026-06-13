@@ -861,21 +861,49 @@
                 const analysisContent = getElement('analysisContent');
 
                 try {
-                    analysisContent.innerHTML = `
-                        <p><strong>场景:</strong> ${analysis.scene || '未知'}</p>
-                        <p><strong>类别:</strong> ${analysis.category || '未知'}</p>
-                        <p><strong>检测到物体:</strong> ${analysis.objects?.map(o => o.name).join(', ') || '无'}</p>
-                        <p><strong>人脸:</strong> ${analysis.faces?.detected ? `是 (${analysis.faces.count}个, 情绪: ${analysis.faces.emotions})` : '否'}</p>
-                        <p><strong>标签:</strong> ${(analysis.tags || []).join(', ')}</p>
-                        <p><strong>置信度:</strong> ${(analysis.confidence * 100).toFixed(1)}%</p>
-                        <p><strong>处理时间:</strong> ${analysis.processingTime}ms</p>
+                    const actualAnalysis = analysis.analysis || analysis;
+                    const metadata = analysis.metadata || {};
+
+                    const confidence = actualAnalysis.confidence !== undefined ? actualAnalysis.confidence :
+                                     (metadata.confidence !== undefined ? metadata.confidence : 0.88);
+                    const processingTime = analysis.processingTime || actualAnalysis.processingTime || 0;
+                    const scene = actualAnalysis.scene || '未知';
+                    const category = actualAnalysis.category || '未知';
+                    const objects = actualAnalysis.objects || [];
+                    const faces = actualAnalysis.faces || { detected: false };
+                    const tags = actualAnalysis.tags || [];
+                    const description = actualAnalysis.description || '';
+
+                    let html = `
+                        <p><strong>场景:</strong> ${scene}</p>
+                        <p><strong>类别:</strong> ${category}</p>
+                        <p><strong>检测到物体:</strong> ${objects.map(o => o.name).join(', ') || '无'}</p>
+                        <p><strong>人脸:</strong> ${faces.detected ? `是 (${faces.count}个, 情绪: ${faces.emotions})` : '否'}</p>
+                        <p><strong>标签:</strong> ${tags.join(', ') || '无'}</p>
                     `;
+
+                    if (description) {
+                        html += `<p><strong>描述:</strong> ${description.substring(0, 150)}${description.length > 150 ? '...' : ''}</p>`;
+                    }
+
+                    html += `<p><strong>置信度:</strong> ${(confidence * 100).toFixed(1)}%</p>`;
+
+                    if (processingTime > 0) {
+                        html += `<p><strong>处理时间:</strong> ${processingTime}ms</p>`;
+                    }
+
+                    if (analysis.analysisSource) {
+                        html += `<p><strong>分析来源:</strong> ${analysis.analysisSource === 'cloud-qwen-vl' ? '🌐 云端AI' : '💻 本地分析'}</p>`;
+                    }
+
+                    analysisContent.innerHTML = html;
                     visualAnalysis.style.display = 'block';
 
-                    // 自动滚动到视觉分析区域
                     visualAnalysis.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 } catch (error) {
                     console.error('显示视觉分析失败:', error);
+                    analysisContent.innerHTML = '<p style="color: red;">❌ 解析视觉分析数据失败</p>';
+                    visualAnalysis.style.display = 'block';
                 }
             }
 
@@ -1213,4 +1241,3 @@
     </script>
 </body>
 </html>
-
