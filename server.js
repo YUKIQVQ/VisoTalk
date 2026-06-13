@@ -7,19 +7,18 @@ const { v4: uuidv4 } = require('uuid');
 const qwenService = require('./services/qwenService');
 const visionService = require('./services/visionService');
 const cache = require('./utils/cache');
+const costMonitor = require('./utils/costMonitor');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer配置 - 用于文件上传
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = process.env.UPLOAD_DIR || './uploads';
@@ -49,16 +48,24 @@ const upload = multer({
   }
 });
 
-// 健康检查
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    provider: 'qwen'
+    provider: 'qwen',
+    cacheStats: cache.getStats(),
+    costStats: costMonitor.getUsageReport()
   });
 });
 
-// 视觉分析接口
+app.get('/api/monitor/costs', (req, res) => {
+  res.json(costMonitor.getUsageReport());
+});
+
+app.get('/api/monitor/cache', (req, res) => {
+  res.json(cache.getStats());
+});
+
 app.post('/api/vision/analyze', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -66,19 +73,19 @@ app.post('/api/vision/analyze', upload.single('image'), async (req, res) => {
     }
 
     const imageBuffer = req.file.buffer || require('fs').readFileSync(req.file.path);
-    const cacheKey = `vision_${require('crypto').createHash('md5').update(imageBuffer).digest('hex')}`;
-    
-    // 检查缓存
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return res.json(cached);
-    }
 
-    // 进行视觉分析
-    const analysis = await visionService.analyzeImage(imageBuffer);
+    const forceCloud = req.body.forceCloud === 'true';
+    const forceLocal = req.body.forceLocal === 'true';
     
-    // 缓存结果
-    cache.set(cacheKey, analysis, parseInt(process.env.CACHE_TTL) || 300);
+    const analysis = await visionService.analyzeImage(imageBuffer, {
+      forceCloud,
+      forceLocal
+    });
+
+    costMonitor.recordVisionUsage(
+      analysis.analysisSource === 'cloud-enhanced' ? 'cloud' : 'local',
+      analysis.metadata.costEstimate
+    );
     
     res.json(analysis);
   } catch (error) {
@@ -90,24 +97,14 @@ app.post('/api/vision/analyze', upload.single('image'), async (req, res) => {
   }
 });
 
-// 实时视觉分析（Base64图片）
 app.post('/api/vision/analyze-base64', async (req, res) => {
   try {
-    const { imageBase64 } = req.body;
+    const { imageBase64, forceCloud, forceLocal } = req.body;
     
     if (!imageBase64) {
       return res.status(400).json({ error: '请提供Base64编码的图片' });
     }
 
-    const cacheKey = `vision_${require('crypto').createHash('md5').update(imageBase64).digest('hex')}`;
-    
-    // 检查缓存
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return res.json(cached);
-    }
-
-    // 解码Base64
     const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ error: '无效的Base64格式' });
@@ -115,11 +112,15 @@ app.post('/api/vision/analyze-base64', async (req, res) => {
 
     const imageBuffer = Buffer.from(matches[2], 'base64');
     
-    // 进行视觉分析
-    const analysis = await visionService.analyzeImage(imageBuffer);
+    const analysis = await visionService.analyzeImage(imageBuffer, {
+      forceCloud: forceCloud === 'true',
+      forceLocal: forceLocal === 'true'
+    });
     
-    // 缓存结果
-    cache.set(cacheKey, analysis, parseInt(process.env.CACHE_TTL) || 300);
+    costMonitor.recordVisionUsage(
+      analysis.analysisSource === 'cloud-enhanced' ? 'cloud' : 'local',
+      analysis.metadata.costEstimate
+    );
     
     res.json(analysis);
   } catch (error) {
@@ -131,10 +132,9 @@ app.post('/api/vision/analyze-base64', async (req, res) => {
   }
 });
 
-// AI对话接口
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, context, visionData } = req.body;
+    const { message, context, visionData, aiSettings } = req.body;
     
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: '请提供有效的消息内容' });
@@ -144,17 +144,28 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: '消息长度不能超过2000字符' });
     }
 
-    // 构建完整的上下文
+    const needsVision = visionService.needsVisionAnalysis(message);
+
+    let finalVisionData = visionData;
+    if (needsVision && !visionData) {
+      console.log('👁️ 检测到视觉相关关键词，但无视觉数据');
+    }
+
     const fullContext = {
       userMessage: message,
-      visionAnalysis: visionData || null,
+      visionAnalysis: finalVisionData || null,
       conversationHistory: context || [],
+      aiSettings: aiSettings || {},
       timestamp: new Date().toISOString()
     };
 
-    // 生成AI响应
     const response = await qwenService.generateResponse(fullContext);
     
+    costMonitor.recordQwenUsage(
+      response.usage.tokens,
+      response.usage.estimatedCost
+    );
+
     res.json(response);
   } catch (error) {
     console.error('AI对话错误:', error);
@@ -165,7 +176,6 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// 语音转文字接口（预留，实际可由前端Web Speech API处理）
 app.post('/api/speech-to-text', async (req, res) => {
   try {
     const { audioBase64 } = req.body;
@@ -187,7 +197,6 @@ app.post('/api/speech-to-text', async (req, res) => {
   }
 });
 
-// 文字转语音接口（预留）
 app.post('/api/text-to-speech', async (req, res) => {
   try {
     const { text, voice = 'zh-CN' } = req.body;
@@ -209,7 +218,6 @@ app.post('/api/text-to-speech', async (req, res) => {
   }
 });
 
-// 错误处理中间件
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: '文件上传错误' });
@@ -219,18 +227,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: '服务器内部错误' });
 });
 
-// 404处理
 app.use((req, res) => {
   res.status(404).json({ error: '接口不存在' });
 });
 
-// 启动服务器
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 AI视觉语音对话助手后端服务已启动`);
     console.log(`📍 服务地址: http://localhost:${PORT}`);
     console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🤖 AI提供商: 通义千问 (Qwen)`);
+    console.log(`💰 成本监控: 已启用`);
+    console.log(`📊 缓存系统: 高级缓存（含磁盘）`);
   });
 }
 

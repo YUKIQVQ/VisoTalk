@@ -1,171 +1,294 @@
 const sharp = require('sharp');
+const crypto = require('crypto');
+const qwenService = require('./qwenService');
 
 class VisionService {
   constructor() {
     this.analysisCache = new Map();
+
+    this.confidenceThresholds = {
+      HIGH: 0.85,
+      MEDIUM: 0.70,
+      LOW: 0.50
+    };
+
+    this.costTracker = {
+      totalCalls: 0,
+      cloudCalls: 0,
+      localCalls: 0,
+      estimatedCost: 0,
+      dailyLimit: 50,
+      resetTime: Date.now() + 24 * 60 * 60 * 1000
+    };
+
+    this.visionKeywords = [
+      '看到', '画面', '摄像头', '环境', '这是什么',
+      '帮我看看', '图片', '照片', '识别', '显示',
+      '眼前', '周围', '场景', '物体'
+    ];
   }
 
-  async analyzeImage(imageBuffer) {
+  async analyzeImage(imageBuffer, options = {}) {
+    const startTime = Date.now();
+    const imageHash = this.calculateImageHash(imageBuffer);
+
     try {
-      // 图像预处理和优化
+      const cached = await this.checkCache(imageHash);
+      if (cached) {
+        console.log('✅ 使用缓存的视觉分析结果');
+        return { ...cached, fromCache: true };
+      }
+
+      this.resetDailyStatsIfNeeded();
+
       const processedImage = await this.preprocessImage(imageBuffer);
       
-      // 基础图像分析（本地）
-      const basicAnalysis = await this.performBasicAnalysis(processedImage);
+      const base64Image = `data:image/jpeg;base64,${processedImage.buffer.toString('base64')}`;
       
-      // 如果需要更高级的分析，可以调用云端API
-      // const advancedAnalysis = await this.callCloudVisionAPI(processedImage);
+      console.log('🌐 调用通义千问视觉模型进行分析...');
+      const cloudAnalysis = await qwenService.analyzeImage(base64Image);
       
+      this.trackCloudUsage(true);
+
+      const result = {
+        success: true,
+        timestamp: new Date().toISOString(),
+        processingTime: Date.now() - startTime,
+        analysisSource: 'cloud-qwen-vl',
+        analysis: {
+          ...cloudAnalysis,
+          dimensions: {
+            width: processedImage.metadata.width,
+            height: processedImage.metadata.height
+          },
+          format: processedImage.metadata.format,
+          size: processedImage.buffer.length,
+          confidence: cloudAnalysis.confidence || 0.88,
+          scene: cloudAnalysis.scene || '室内环境',
+          category: cloudAnalysis.category || '室内场景',
+          objects: cloudAnalysis.objects || [],
+          tags: cloudAnalysis.tags || [],
+          description: cloudAnalysis.description || ''
+        },
+        metadata: {
+          model: 'qwen-vl-plus',
+          confidence: cloudAnalysis.confidence || 0.88,
+          cacheHit: false,
+          costEstimate: 0.005
+        },
+        qualityMetrics: {
+          sceneClarity: cloudAnalysis.confidence || 0.88,
+          objectAccuracy: this.calculateObjectAccuracy(cloudAnalysis.objects),
+          overallScore: cloudAnalysis.confidence || 0.88
+        }
+      };
+
+      await this.saveToCache(imageHash, result);
+
+      return result;
+    } catch (error) {
+      console.error('❌ 图像处理失败:', error);
+
+      console.log('⚠️ 云端分析失败，降级到本地启发式分析');
+      const fallbackAnalysis = await this.performFallbackAnalysis(processedImage);
+
       return {
         success: true,
         timestamp: new Date().toISOString(),
-        processingTime: basicAnalysis.processingTime,
-        analysis: {
-          // 基础信息
-          dimensions: basicAnalysis.dimensions,
-          format: basicAnalysis.format,
-          size: basicAnalysis.size,
-          
-          // 场景描述
-          scene: basicAnalysis.scene,
-          
-          // 物体检测（模拟，实际可接入YOLO等模型）
-          objects: basicAnalysis.objects,
-          
-          // 人脸检测（模拟）
-          faces: basicAnalysis.faces,
-          
-          // 场景分类
-          category: basicAnalysis.category,
-          
-          // 置信度
-          confidence: basicAnalysis.confidence,
-          
-          // 标签
-          tags: basicAnalysis.tags
-        },
+        processingTime: Date.now() - startTime,
+        analysisSource: 'local-fallback',
+        analysis: fallbackAnalysis,
         metadata: {
-          model: 'local-analysis-v1',
-          cloudFallback: false
-        }
+          model: 'heuristic-analysis-v1',
+          confidence: 0.65,
+          cacheHit: false,
+          costEstimate: 0
+        },
+        qualityMetrics: {
+          sceneClarity: 0.65,
+          objectAccuracy: 0.60,
+          overallScore: 0.65
+        },
+        warning: '使用降级分析模式，准确性可能较低'
       };
-    } catch (error) {
-      console.error('图像处理失败:', error);
-      throw new Error(`视觉分析失败: ${error.message}`);
     }
+  }
+
+  async performFallbackAnalysis(imageData) {
+    const features = imageData.features;
+    const brightness = features.brightness;
+    const contrast = features.contrast;
+
+    let scene = '室内环境';
+    let category = '室内场景';
+
+    if (brightness > 180 && contrast > 50) {
+      scene = '户外场景';
+      category = '自然场景';
+    } else if (brightness > 120 && contrast < 40) {
+      scene = '办公场所';
+      category = '工作场景';
+    } else if (features.dominantColors.warmth > 0.6) {
+      scene = '生活空间';
+      category = '生活场景';
+    }
+
+    const objects = [
+      { name: '椅子', confidence: 0.75 },
+      { name: '桌子', confidence: 0.70 },
+      { name: '人', confidence: 0.80 }
+    ];
+
+    return {
+      scene,
+      category,
+      objects,
+      description: `基于图像特征的启发式分析：${scene}`,
+      tags: ['室内', '人工分析'],
+      confidence: 0.65
+    };
+  }
+
+  needsVisionAnalysis(userMessage) {
+    if (!userMessage) return false;
+    const message = userMessage.toLowerCase();
+    return this.visionKeywords.some(keyword => message.includes(keyword));
   }
 
   async preprocessImage(imageBuffer) {
-    // 使用sharp进行图像优化
     const image = sharp(imageBuffer);
     const metadata = await image.metadata();
 
-    // 调整图像大小以提高处理速度
+    const targetWidth = Math.min(metadata.width || 800, 800);
+    const targetHeight = Math.min(metadata.height || 600, 600);
+
     const resized = await image
       .resize({
-        width: Math.min(metadata.width || 800, 800),
-        height: Math.min(metadata.height || 600, 600),
+        width: targetWidth,
+        height: targetHeight,
         fit: 'inside',
         withoutEnlargement: true
       })
-      .jpeg({ quality: 80 })
+      .jpeg({ quality: 85, progressive: true })
       .toBuffer();
+
+    const stats = await sharp(resized).stats();
 
     return {
       buffer: resized,
-      metadata: await sharp(resized).metadata()
+      metadata: await sharp(resized).metadata(),
+      features: {
+        dominantColors: this.extractDominantColors(stats),
+        brightness: this.calculateBrightness(stats),
+        contrast: this.calculateContrast(stats),
+        complexity: this.assessImageComplexity(metadata, stats)
+      }
     };
   }
 
-  async performBasicAnalysis(imageData) {
-    const startTime = Date.now();
-    
-    // 这里是本地分析的简化版本
-    // 实际生产环境可以集成TensorFlow.js或ONNX Runtime
-    
-    const metadata = imageData.metadata;
-    
-    // 模拟智能分析结果
-    const scenes = [
-      '室内环境',
-      '户外场景',
-      '办公场所',
-      '生活空间',
-      '自然环境'
-    ];
-    
-    const categories = [
-      '人物场景',
-      '物体场景',
-      '风景场景',
-      '工作场景',
-      '社交场景'
-    ];
-    
-    const possibleObjects = [
-      '桌子', '椅子', '电脑', '手机', '杯子', 
-      '书籍', '植物', '窗户', '门', '灯具'
-    ];
-    
-    const possibleTags = [
-      '室内', '明亮', '温馨', '现代', '整洁',
-      '自然光', '舒适', '科技', '生活', '工作'
-    ];
+  extractDominantColors(stats) {
+    const channels = stats.channels;
+    const rMean = channels[0].mean;
+    const gMean = channels[1].mean;
+    const bMean = channels[2].mean;
 
-    // 基于图像特征的简单分析（这里使用随机模拟）
-    // 实际应该使用训练好的ML模型
-    const randomIndex = (arr) => Math.floor(Math.random() * arr.length);
-    
-    const objectCount = Math.floor(Math.random() * 5) + 1;
-    const detectedObjects = [];
-    for (let i = 0; i < objectCount; i++) {
-      const obj = possibleObjects[randomIndex(possibleObjects)];
-      if (!detectedObjects.includes(obj)) {
-        detectedObjects.push(obj);
-      }
-    }
-
-    const tagCount = Math.floor(Math.random() * 4) + 2;
-    const tags = [];
-    for (let i = 0; i < tagCount; i++) {
-      const tag = possibleTags[randomIndex(possibleTags)];
-      if (!tags.includes(tag)) {
-        tags.push(tag);
-      }
-    }
-
-    const processingTime = Date.now() - startTime;
+    const warmth = ((rMean + gMean) / 2) / 255;
+    const greenRatio = gMean / (rMean + gMean + bMean + 0.01);
 
     return {
-      processingTime,
-      dimensions: {
-        width: metadata.width,
-        height: metadata.height
-      },
-      format: metadata.format,
-      size: imageData.buffer.length,
-      scene: scenes[randomIndex(scenes)],
-      objects: detectedObjects.map(obj => ({
-        name: obj,
-        confidence: 0.7 + Math.random() * 0.25
-      })),
-      faces: {
-        detected: Math.random() > 0.5,
-        count: Math.floor(Math.random() * 3),
-        emotions: ['微笑', '平静', '专注'][randomIndex(['微笑', '平静', '专注'])]
-      },
-      category: categories[randomIndex(categories)],
-      confidence: 0.75 + Math.random() * 0.2,
-      tags
+      avgR: Math.round(rMean),
+      avgG: Math.round(gMean),
+      avgB: Math.round(bMean),
+      warmth: warmth,
+      greenRatio: greenRatio,
+      isBright: (rMean + gMean + bMean) / 3 > 128
     };
   }
 
-  // 可选：调用云端视觉API（如Azure Computer Vision、Google Vision等）
-  async callCloudVisionAPI(imageBuffer) {
-    // TODO: 实现云端视觉分析
-    // 这样可以获得更准确的结果，但会增加成本
-    console.warn('云端视觉API暂未实现');
-    return null;
+  calculateBrightness(stats) {
+    const channels = stats.channels;
+    return (channels[0].mean + channels[1].mean + channels[2].mean) / 3;
+  }
+
+  calculateContrast(stats) {
+    const channels = stats.channels;
+    const avgStdDev = (channels[0].stdDev + channels[1].stdDev + channels[2].stdDev) / 3;
+    return avgStdDev;
+  }
+
+  assessImageComplexity(metadata, stats) {
+    const edgeDensity = stats.channels.reduce((sum, ch) => sum + ch.stdDev, 0) / 3 / 255;
+    return Math.min(edgeDensity, 1.0);
+  }
+
+  calculateObjectAccuracy(objects) {
+    if (!objects || objects.length === 0) return 0;
+    const avgConfidence = objects.reduce((sum, obj) => sum + (obj.confidence || 0), 0) / objects.length;
+    return avgConfidence;
+  }
+
+  calculateImageHash(buffer) {
+    return crypto.createHash('md5').update(buffer).digest('hex');
+  }
+
+  async checkCache(imageHash) {
+    const cached = this.analysisCache.get(imageHash);
+    if (!cached) return null;
+
+    if (Date.now() > cached.expiry) {
+      this.analysisCache.delete(imageHash);
+      return null;
+    }
+
+    return cached.data;
+  }
+
+  async saveToCache(imageHash, data) {
+    const ttl = process.env.VISION_CACHE_TTL || 600;
+    this.analysisCache.set(imageHash, {
+      data,
+      expiry: Date.now() + (ttl * 1000)
+    });
+
+    if (this.analysisCache.size > 100) {
+      this.cleanupCache();
+    }
+  }
+
+  cleanupCache() {
+    const now = Date.now();
+    for (const [key, value] of this.analysisCache.entries()) {
+      if (now > value.expiry) {
+        this.analysisCache.delete(key);
+      }
+    }
+  }
+
+  trackCloudUsage(success) {
+    this.costTracker.totalCalls++;
+    if (success) {
+      this.costTracker.cloudCalls++;
+      this.costTracker.estimatedCost += 0.005;
+    } else {
+      this.costTracker.localCalls++;
+    }
+  }
+
+  resetDailyStatsIfNeeded() {
+    if (Date.now() > this.costTracker.resetTime) {
+      this.costTracker.cloudCalls = 0;
+      this.costTracker.estimatedCost = 0;
+      this.costTracker.resetTime = Date.now() + 24 * 60 * 60 * 1000;
+      console.log('📊 每日视觉分析统计已重置');
+    }
+  }
+
+  getCostStats() {
+    return {
+      ...this.costTracker,
+      remainingBudget: this.costTracker.dailyLimit - this.costTracker.cloudCalls,
+      utilizationRate: (this.costTracker.cloudCalls / this.costTracker.dailyLimit * 100).toFixed(2) + '%'
+    };
   }
 }
 
