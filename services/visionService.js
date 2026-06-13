@@ -5,6 +5,8 @@ const qwenService = require('./qwenService');
 class VisionService {
   constructor() {
     this.analysisCache = new Map();
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
 
     this.confidenceThresholds = {
       HIGH: 0.85,
@@ -233,13 +235,18 @@ class VisionService {
 
   async checkCache(imageHash) {
     const cached = this.analysisCache.get(imageHash);
-    if (!cached) return null;
-
-    if (Date.now() > cached.expiry) {
-      this.analysisCache.delete(imageHash);
+    if (!cached) {
+      this.cacheMisses++;
       return null;
     }
 
+    if (Date.now() > cached.expiry) {
+      this.analysisCache.delete(imageHash);
+      this.cacheMisses++;
+      return null;
+    }
+
+    this.cacheHits++;
     return cached.data;
   }
 
@@ -288,6 +295,21 @@ class VisionService {
       ...this.costTracker,
       remainingBudget: this.costTracker.dailyLimit - this.costTracker.cloudCalls,
       utilizationRate: (this.costTracker.cloudCalls / this.costTracker.dailyLimit * 100).toFixed(2) + '%'
+    };
+  }
+
+  getCacheStats() {
+    const totalRequests = this.cacheHits + this.cacheMisses || 0;
+    const hitRate = totalRequests > 0
+      ? (this.cacheHits / totalRequests)
+      : 0;
+
+    return {
+      hits: this.cacheHits || 0,
+      misses: this.cacheMisses || 0,
+      size: this.analysisCache.size,
+      hitRate: hitRate,
+      ttl: process.env.VISION_CACHE_TTL || 600
     };
   }
 }
