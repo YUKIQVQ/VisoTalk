@@ -66,6 +66,10 @@ app.get('/api/monitor/cache', (req, res) => {
   res.json(cache.getStats());
 });
 
+app.get('/api/monitor/vision-cache', (req, res) => {
+  res.json(visionService.getCacheStats());
+});
+
 app.post('/api/vision/analyze', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -83,7 +87,7 @@ app.post('/api/vision/analyze', upload.single('image'), async (req, res) => {
     });
 
     costMonitor.recordVisionUsage(
-      analysis.analysisSource === 'cloud-enhanced' ? 'cloud' : 'local',
+      analysis.analysisSource && analysis.analysisSource.startsWith('cloud') ? 'cloud' : 'local',
       analysis.metadata.costEstimate
     );
     
@@ -118,7 +122,7 @@ app.post('/api/vision/analyze-base64', async (req, res) => {
     });
     
     costMonitor.recordVisionUsage(
-      analysis.analysisSource === 'cloud-enhanced' ? 'cloud' : 'local',
+      analysis.analysisSource === 'cloud-qwen-vl' || analysis.analysisSource === 'cloud-enhanced' ? 'cloud' : 'local',
       analysis.metadata.costEstimate
     );
     

@@ -27,6 +27,86 @@
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
+            position: relative;
+        }
+
+        .cost-monitor-fixed {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid #81c784;
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 280px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+        }
+
+        .cost-monitor-fixed.active {
+            display: block;
+        }
+
+        .cost-monitor-fixed h4 {
+            color: #2e7d32;
+            margin: 0 0 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .cost-stats-fixed {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .cost-stat-item-fixed {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .cost-stat-label-fixed {
+            color: #555;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .cost-stat-value-fixed {
+            color: #2e7d32;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .refresh-cost-btn-fixed {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid #81c784;
+            border-radius: 6px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #2e7d32;
+            transition: all 0.3s;
+        }
+
+        .refresh-cost-btn-fixed:hover {
+            background: #81c784;
+            color: white;
+        }
+
+        .cache-stats-fixed {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #81c784;
+            font-size: 12px;
+            color: #555;
+            text-align: center;
         }
 
         .header {
@@ -505,10 +585,107 @@
             opacity: 0.9;
             line-height: 1.4;
         }
+
+        .cost-monitor {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 1px solid #81c784;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin: 10px 20px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .cost-monitor.active {
+            display: block;
+        }
+
+        .cost-monitor h4 {
+            color: #2e7d32;
+            margin: 0 0 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .cost-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .cost-stat-item {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .cost-stat-label {
+            color: #555;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .cost-stat-value {
+            color: #2e7d32;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .refresh-cost-btn {
+            background: none;
+            border: 1px solid #81c784;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #2e7d32;
+            transition: all 0.3s;
+        }
+
+        .refresh-cost-btn:hover {
+            background: #81c784;
+            color: white;
+        }
+
+        .cache-stats {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #81c784;
+            font-size: 12px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="cost-monitor-fixed" id="costMonitorFixed">
+            <h4>
+                <span>💰 成本监控</span>
+                <button class="refresh-cost-btn-fixed" id="refreshCostBtnFixed" title="刷新数据">🔄 刷新</button>
+            </h4>
+            <div class="cost-stats-fixed">
+                <div class="cost-stat-item-fixed">
+                    <div class="cost-stat-label-fixed">API调用次数</div>
+                    <div class="cost-stat-value-fixed" id="totalCallsFixed">0</div>
+                </div>
+                <div class="cost-stat-item-fixed">
+                    <div class="cost-stat-label-fixed">预估费用 (USD)</div>
+                    <div class="cost-stat-value-fixed" id="estimatedCostFixed">$0.00</div>
+                </div>
+                <div class="cost-stat-item-fixed">
+                    <div class="cost-stat-label-fixed">云端分析</div>
+                    <div class="cost-stat-value-fixed" id="cloudCallsFixed">0</div>
+                </div>
+                <div class="cost-stat-item-fixed">
+                    <div class="cost-stat-label-fixed">本地分析</div>
+                    <div class="cost-stat-value-fixed" id="localCallsFixed">0</div>
+                </div>
+            </div>
+        </div>
+
         <div class="header">
             <h1>🤖 AI 视觉语音对话助手</h1>
             <p>开启摄像头和麦克风，与AI进行视觉语音交互</p>
@@ -624,6 +801,7 @@
             };
             let recognition = null;
             let isRecognitionSupported = false;
+            let costUpdateInterval = null;
 
             function getElement(id) {
                 return document.getElementById(id);
@@ -664,18 +842,7 @@
             }
 
             function loadSettings() {
-                const saved = localStorage.getItem('aiSettings');
-                if (saved) {
-                    try {
-                        aiSettings = JSON.parse(saved);
-                        console.log('✅ 已加载AI设置:', aiSettings);
-                        updateAIDisplayName();
-                    } catch (e) {
-                        console.error('加载设置失败:', e);
-                    }
-                } else {
-                    updateAIDisplayName();
-                }
+
             }
 
             function updateAIDisplayName() {
@@ -955,6 +1122,8 @@
                     analyzeVision();
                 }, CONSTANTS.VISUAL_ANALYSIS_INTERVAL);
 
+                startCostMonitoring();
+
                 console.log('✅ 对话已开始，使用通义千问AI');
 
                 // 测试后端连接
@@ -985,6 +1154,7 @@
                 getElement('startBtn').disabled = false;
                 getElement('stopBtn').disabled = true;
                 getElement('visualAnalysis').style.display = 'none';
+                stopCostMonitoring();
 
                 const farewell = `${aiSettings.name}：对话已结束。如果你有任何问题，随时可以重新开始！`;
                 addMessage('ai', farewell);
@@ -1212,6 +1382,7 @@
                 getElement('saveSettingsBtn').addEventListener('click', handleSaveSettings);
                 getElement('resetSettingsBtn').addEventListener('click', handleResetSettings);
                 getElement('toggleVisualAnalysis').addEventListener('click', toggleVisualAnalysis);
+                getElement('refreshCostBtnFixed').addEventListener('click', refreshCostData);
 
                 // 点击弹窗外部关闭
                 getElement('settingsModal').addEventListener('click', function(e) {
@@ -1230,6 +1401,74 @@
                 console.log('🤖 AI提供商: 通义千问 (Qwen)');
                 console.log(`🤖 AI名字: ${aiSettings.name}`);
                 console.log(`🎤 语音识别: ${isRecognitionSupported ? '已启用' : '不支持'}`);
+            }
+
+            async function fetchCostStats() {
+                try {
+                    const response = await fetch(`${CONSTANTS.BACKEND_URL}/monitor/costs`);
+                    if (!response.ok) return null;
+
+                    const costData = await response.json();
+                    return costData;
+                } catch (error) {
+                    console.error('获取成本数据失败:', error);
+                    return null;
+                }
+            }
+
+            function updateCostDisplay(costData, cacheData) {
+                const costMonitor = getElement('costMonitorFixed');
+
+                if (!costData) {
+                    costMonitor.classList.remove('active');
+                    return;
+                }
+
+                costMonitor.classList.add('active');
+
+                const totalCallsEl = getElement('totalCallsFixed');
+                const estimatedCostEl = getElement('estimatedCostFixed');
+                const cloudCallsEl = getElement('cloudCallsFixed');
+                const localCallsEl = getElement('localCallsFixed');
+
+                // 适配后端返回的实际数据结构
+                const qwenCalls = costData.qwen?.calls || 0;
+                const visionCloudCalls = costData.vision?.cloudCalls || 0;
+                const visionLocalCalls = costData.vision?.localCalls || 0;
+                const totalCost = parseFloat(costData.totalCost || 0);
+
+                // 总调用次数 = Qwen对话次数 + 视觉分析次数
+                const totalCalls = qwenCalls + visionCloudCalls + visionLocalCalls;
+
+                totalCallsEl.textContent = totalCalls;
+                estimatedCostEl.textContent = `$${totalCost.toFixed(4)}`;
+                cloudCallsEl.textContent = visionCloudCalls;
+                localCallsEl.textContent = visionLocalCalls;
+            }
+
+            async function refreshCostData() {
+                if (!isConversationActive) return;
+
+                const costData = await fetchCostStats();
+                updateCostDisplay(costData, null);
+            }
+
+            function startCostMonitoring() {
+                refreshCostData();
+
+                costUpdateInterval = setInterval(() => {
+                    refreshCostData();
+                }, 10000);
+            }
+
+            function stopCostMonitoring() {
+                if (costUpdateInterval) {
+                    clearInterval(costUpdateInterval);
+                    costUpdateInterval = null;
+                }
+
+                const costMonitor = getElement('costMonitorFixed');
+                costMonitor.classList.remove('active');
             }
 
             if (document.readyState === 'loading') {
