@@ -1,7 +1,12 @@
 # VisoTalk
 
 一个基于 Node.js 和通义千问（Qwen）大模型的 AI 视觉语音交互系统，支持实时摄像头画面分析、自然语言对话和多模态交互。
+## 🎬 演示 Demo
 
+**在线演示**：[(https://www.bilibili.com/video/BV1y1JW6tEUD/)]]
+
+**本地演示截图**：
+![界面截图](./screenshots/demo.png)
 ##  项目简介
 
 本项目是一个端到端的 AI 视觉语音对话助手，能够：
@@ -215,14 +220,7 @@ npm test
 - [Express.js 官方文档](https://expressjs.com/)
 - [WebRTC API 文档](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API)
 
-## 🎬 演示 Demo
 
-**在线演示**：[(https://www.bilibili.com/video/BV1y1JW6tEUD/)]]
-
-**本地演示截图**：
-![界面截图](./screenshots/demo.png)
-
-> 💡 提示：欢迎提交 PR 添加更多演示链接或截图！
 
 ## 👨‍💻 作者
 
@@ -235,10 +233,6 @@ npm test
 - 阿里云 DashScope 团队
 - 所有贡献者
 
----
-
-**最后更新**: 2026年6月  
-**版本**: v1.0.0
 
 
 
