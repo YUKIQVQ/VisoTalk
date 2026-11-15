@@ -33,6 +33,7 @@
 - **WebRTC API** - 摄像头和麦克风访问
 - **Fetch API** - HTTP 请求
 - **Canvas API** - 视频帧捕获
+- Web Speech API (SpeechRecognition) - 浏览器端语音识别（Chrome / Edge）
 
 ### AI 服务
 - **阿里云 DashScope (通义千问)** - Qwen-VL-Max / Qwen-Plus 多模态大模型
@@ -143,6 +144,13 @@ npm test
 - ✅ 语音录制模拟
 - ✅ 视觉分析结果可视化
 - ✅ 错误提示与状态反馈
+
+## 🎤 语音交互说明
+
+- 点击「🎤 说话」按钮开始识别，使用浏览器原生 Web Speech API（SpeechRecognition），识别语言为 zh-CN，无需额外后端服务或密钥。
+- 识别完成后文本自动填入输入框，并在约 0.5 秒后作为消息发送，结合当前摄像头画面进行多模态对话。
+- 需要 Chrome 或 Edge 浏览器并授予麦克风权限；不支持的浏览器会给出明确提示，仍可使用文字输入。
+- 针对未检测到语音、权限被拒等识别错误有相应提示，并自动恢复按钮状态。
 
 ## 📝 原创性声明
 
